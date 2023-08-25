@@ -227,11 +227,22 @@ search.")
 ;;
 ;;; Helpers
 
+(defun evil-snipe-combine-regexps (data)
+  (mapconcat (lambda (data)
+               (let ((regexp (cdr data)))
+                 (cond ((or (and (string-prefix-p "\\(" regexp)
+                                 (string-suffix-p "\\)" regexp))
+                            (and (string-prefix-p "[" regexp)
+                                 (string-suffix-p "]" regexp)))
+                        regexp)
+                       (t (concat "\\(" regexp "\\)")))))
+             data))
+
 (defun evil-snipe--case-p (data)
   "Return non-nil if a capital letter exists in DATA."
   (and evil-snipe-smart-case
        (let ((case-fold-search nil))
-         (not (string-match-p "[A-Z]" (mapconcat #'cdr data ""))))))
+         (not (string-match-p "[A-Z]" (evil-snipe-combine-regexps data))))))
 
 (defun evil-snipe--process-key (key)
   (let ((keystr (char-to-string key)))
@@ -337,7 +348,7 @@ If FIRST-P is t, then use `evil-snipe-first-p-match-face'"
   "Highlight instances of keys in DATA at COUNT intervals.
 Goes backward if FORWARD-P is nil."
   (let ((case-fold-search (evil-snipe--case-p data))
-        (match (mapconcat #'cdr data ""))
+        (match (evil-snipe-combine-regexps data))
         (bounds
          (let ((evil-snipe-scope
                 (pcase evil-snipe-scope
@@ -410,7 +421,7 @@ is the transient map to activate afterwards."
          (point))))))
 
 (defun evil-snipe--seek-re (data scope count)
-  (let ((regex (mapconcat #'cdr data ""))
+  (let ((regex (evil-snipe-combine-regexps data))
         result)
     (when (and evil-snipe-skip-leading-whitespace
                (looking-at-p "[ \t]+")
@@ -426,7 +437,7 @@ is the transient map to activate afterwards."
   "Perform a snipe and adjust cursor position depending on mode."
   (let ((orig-point (point))
         (forward-p (> count 0))
-        (match (mapconcat #'cdr data "")))
+        (match (evil-snipe-combine-regexps data)))
     ;; Adjust search starting point
     (if forward-p (forward-char))
     (unless evil-snipe--consume-match
